@@ -17,7 +17,8 @@ public static class PolarSampler
         double pixelHeight,
         double thetaMin,
         double thetaMax,
-        IReadOnlyDictionary<string, double>? parameters = null)
+        IReadOnlyDictionary<string, double>? parameters = null,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         ArgumentNullException.ThrowIfNull(radiusExpression);
 
@@ -33,7 +34,7 @@ public static class PolarSampler
             MinSteps,
             MaxSteps);
 
-        var context = PlotSampling.CreateContext(parameters);
+        var context = PlotSampling.CreateContext(parameters, columns);
         var jumpLimit = Math.Max(viewport.Width, viewport.Height) * 4;
 
         var current = new List<GraphPoint>();

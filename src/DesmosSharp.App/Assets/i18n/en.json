@@ -21,6 +21,16 @@
   "Maximum": "max",
   "Step": "step",
   "ParameterSettings": "Slider range",
+  "Table": "Table",
+  "AddTable": "+ Table",
+  "AddRow": "+ Row",
+  "RemoveRow": "− Row",
+  "AddXColumn": "+ x col",
+  "AddYColumn": "+ y col",
+  "RemoveColumn": "Delete column",
+  "RemoveTable": "Delete table",
+  "Lines": "Lines",
+  "LinesTip": "Connect x/y points in row order",
   "Play": "Play",
   "Pause": "Pause"
 }

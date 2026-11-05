@@ -6,6 +6,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesmosSharp.App.Localization;
 using DesmosSharp.App.Services;
+using DesmosSharp.Core.Analysis;
+using DesmosSharp.Core.Evaluation;
+using DesmosSharp.Core.Parsing;
 using DesmosSharp.Graphing;
 
 namespace DesmosSharp.App.ViewModels;
@@ -17,13 +20,18 @@ public partial class MainWindowViewModel : ObservableObject
         "#C74440", "#2D70B3", "#388C46", "#6042A6", "#000000",
     ];
 
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<Value>> EmptyColumns =
+        new Dictionary<string, IReadOnlyList<Value>>();
+
     private readonly UndoManager _undoManager = new();
     private readonly Dictionary<string, ParameterViewModel> _parameters = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _columnCounters = new(StringComparer.Ordinal);
     private readonly DispatcherTimer _animationTimer;
 
     private bool _isRestoring;
     private bool _suppressCurveRebuild;
     private IReadOnlyList<PlotItem> _plots = [];
+    private int _tableCount;
 
     public MainWindowViewModel()
     {
@@ -49,6 +57,13 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ExpressionItemViewModel> Expressions { get; }
 
+    /// <summary>数据表列表，列名可直接被表达式引用。</summary>
+    public ObservableCollection<DataTableViewModel> Tables { get; } = [];
+
+    /// <summary>所有表格列名，用于把列引用从滑块参数中排除。</summary>
+    public IReadOnlyCollection<string> KnownColumns =>
+        Tables.SelectMany(table => table.Columns).Select(column => column.Name).ToList();
+
     /// <summary>供画板绘制的图形元素。</summary>
     public IReadOnlyList<PlotItem> Plots
     {
@@ -58,6 +73,52 @@ public partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     private void AddExpression() => AddExpressionAfter(Expressions.Count > 0 ? Expressions[^1] : null);
+
+    [RelayCommand]
+    private void AddTable()
+    {
+        var table = new DataTableViewModel(this, CreateBrush(_tableCount + 2));
+        table.Initialize();
+        Tables.Add(table);
+        _tableCount++;
+        RefreshAllRows();
+        RebuildGraph();
+    }
+
+    public void RemoveTable(DataTableViewModel table)
+    {
+        if (!Tables.Remove(table))
+        {
+            return;
+        }
+
+        RefreshAllRows();
+        RebuildGraph();
+    }
+
+    /// <summary>表格数据或结构变化后重新解析行并重绘。</summary>
+    public void OnTableChanged()
+    {
+        RefreshAllRows();
+        RebuildGraph();
+    }
+
+    /// <summary>列名增加或删除会影响行的自由变量，需要重新解析。</summary>
+    private void RefreshAllRows()
+    {
+        foreach (var row in Expressions)
+        {
+            row.Refresh();
+        }
+    }
+
+    /// <summary>分配不重复的表格列名，例如 <c>x_1</c>、<c>y_1</c>。</summary>
+    public string NextColumnName(string prefix)
+    {
+        var index = _columnCounters.TryGetValue(prefix, out var current) ? current + 1 : 1;
+        _columnCounters[prefix] = index;
+        return $"{prefix}_{index}";
+    }
 
     [RelayCommand]
     private void ClearAll()
@@ -356,10 +417,26 @@ public partial class MainWindowViewModel : ObservableObject
     private void RebuildCurves()
     {
         var built = new List<PlotItem>();
+        var columns = CollectColumnValues();
 
         foreach (var row in Expressions)
         {
-            if (!row.IsVisible || row.Plot is not { } plot)
+            if (!row.IsVisible)
+            {
+                continue;
+            }
+
+            if (row.Plot is RegressionPlot regression)
+            {
+                if (FitRegression(regression, columns, row) is { } curve)
+                {
+                    built.Add(curve with { ColorArgb = PlotModelBuilder.ToArgb(row.Color) });
+                }
+
+                continue;
+            }
+
+            if (row.Plot is not { } plot)
             {
                 continue;
             }
@@ -379,10 +456,138 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
 
-            built.Add(BindParameters(plot, values) with { ColorArgb = PlotModelBuilder.ToArgb(row.Color) });
+            var bound = BindParameters(plot, values);
+            built.Add((columns.Count == 0 ? bound : bound with { Columns = columns })
+                with { ColorArgb = PlotModelBuilder.ToArgb(row.Color) });
+        }
+
+        foreach (var table in Tables)
+        {
+            var points = table.GetPoints();
+            if (points.Count == 0)
+            {
+                continue;
+            }
+
+            built.Add(new ScatterPlot(points, PlotModelBuilder.ToArgb(table.Color), table.ShowLines));
         }
 
         Plots = built;
+    }
+
+    /// <summary>汇总所有表格列，作为表达式可直接引用的变量。</summary>
+    private IReadOnlyDictionary<string, IReadOnlyList<Value>> CollectColumnValues()
+    {
+        if (Tables.Count == 0)
+        {
+            return EmptyColumns;
+        }
+
+        var result = new Dictionary<string, IReadOnlyList<Value>>(StringComparer.Ordinal);
+
+        foreach (var table in Tables)
+        {
+            foreach (var (name, values) in table.GetColumnValues())
+            {
+                result[name] = values;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>用表格数据做最小二乘拟合，并把解换算成一条关于 x 的曲线。</summary>
+    private ExplicitPlot? FitRegression(
+        RegressionPlot regression,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>> columns,
+        ExpressionItemViewModel row)
+    {
+        if (regression.ParameterNames.Count == 0 || columns.Count == 0)
+        {
+            return null;
+        }
+
+        var context = EvaluationContext.Create();
+
+        foreach (var (name, values) in columns)
+        {
+            context.SetVariable(name, Value.FromList(values));
+        }
+
+        var target = ToSeries(regression.Target.Evaluate(context), 0);
+        if (target.Length < regression.ParameterNames.Count)
+        {
+            return null;
+        }
+
+        var names = regression.ParameterNames;
+        var model = ExpressionCompiler.Compile(regression.Model);
+        var initial = new double[names.Count];
+
+        for (var index = 0; index < names.Count; index++)
+        {
+            initial[index] = _parameters.TryGetValue(names[index], out var slider) ? slider.Value : 1;
+        }
+
+        double[] Predict(IReadOnlyList<double> parameters)
+        {
+            for (var index = 0; index < names.Count; index++)
+            {
+                context.SetNumber(names[index], parameters[index]);
+            }
+
+            return ToSeries(model.Evaluate(context), target.Length);
+        }
+
+        var result = RegressionSolver.Solve(target, initial, Predict);
+        if (result is null)
+        {
+            return null;
+        }
+
+        row.RegressionSummary = string.Join(
+            "   ",
+            names.Select((name, index) => $"{name} = {result.Parameters[index]:G6}"));
+
+        // 拟合曲线把模型里的自变量列换成 x，其余仍按解出的参数求值
+        var curveNode = regression.XColumnName is not { } xColumn
+            ? regression.Model
+            : ExpressionRewriter.ReplaceIdentifier(regression.Model, xColumn, new IdentifierNode("x"));
+
+        var curveParameters = new Dictionary<string, double>(StringComparer.Ordinal);
+
+        for (var index = 0; index < names.Count; index++)
+        {
+            curveParameters[names[index]] = result.Parameters[index];
+        }
+
+        return new ExplicitPlot(ExpressionCompiler.Compile(curveNode), curveParameters, 0);
+    }
+
+    /// <summary>把求值结果转成与数据行对齐的数值序列，缺失处为 NaN。</summary>
+    private static double[] ToSeries(Value value, int length)
+    {
+        if (value.TryGetNumber(out var number))
+        {
+            var broadcast = new double[length];
+            Array.Fill(broadcast, number);
+            return broadcast;
+        }
+
+        if (value.Kind != ValueKind.List)
+        {
+            return [];
+        }
+
+        var items = value.Items!;
+        var series = new double[items.Count];
+
+        for (var index = 0; index < series.Length; index++)
+        {
+            series[index] = items[index].TryGetNumber(out var item) ? item : double.NaN;
+        }
+
+        return series;
     }
 
     /// <summary>把滑块当前取值写入图形元素。</summary>

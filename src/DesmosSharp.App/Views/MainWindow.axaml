@@ -68,7 +68,7 @@
 
       <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E1E4EA" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="48,*">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="16,0">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="16,0">
             <TextBlock x:Name="ExpressionsHeader"
                        Text="{i18n:Localize Expressions}"
                        FontWeight="SemiBold" Foreground="#1F2329" VerticalAlignment="Center" />
@@ -76,9 +76,12 @@
                     Command="{Binding ClearAllCommand}" VerticalAlignment="Center" />
             <Button Grid.Column="2" Content="{i18n:Localize AddExpression}" Padding="10,4"
                     Command="{Binding AddExpressionCommand}" VerticalAlignment="Center" />
+            <Button Grid.Column="3" Content="{i18n:Localize AddTable}" Padding="10,4" Margin="6,0,0,0"
+                    Command="{Binding AddTableCommand}" VerticalAlignment="Center" />
           </Grid>
 
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
             <ItemsControl x:Name="ExpressionsList" ItemsSource="{Binding Expressions}" Margin="8,0,8,8">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ExpressionItemViewModel">
@@ -125,6 +128,10 @@
                     <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="6"
                                Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}"
                                Foreground="#D32F2F" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="6"
+                               Text="{Binding RegressionSummary}" IsVisible="{Binding HasRegressionSummary}"
+                               Foreground="#2D70B3" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4" />
 
                     <ItemsControl Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="7"
                                   ItemsSource="{Binding Parameters}" Margin="0,0,4,6">
@@ -199,6 +206,76 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- 数据表 -->
+            <ItemsControl ItemsSource="{Binding Tables}" Margin="8,0,8,8">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DataTableViewModel">
+                  <Border Background="#FAFBFC" BorderBrush="#E1E4EA" BorderThickness="1"
+                          CornerRadius="6" Padding="8" Margin="0,0,0,8">
+                    <StackPanel Spacing="6">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                        <Border Width="12" Height="12" CornerRadius="6" Background="{Binding Color}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{i18n:Localize Table}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="#1F2329" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        <ToggleButton Grid.Column="2" Content="{i18n:Localize Lines}" Padding="6,2" FontSize="11"
+                                      Margin="0,0,4,0" IsChecked="{Binding ShowLines}"
+                                      ToolTip.Tip="{i18n:Localize LinesTip}" />
+                        <Button Grid.Column="3" Content="{i18n:Localize AddXColumn}" Padding="6,2" FontSize="11"
+                                Margin="0,0,4,0" Command="{Binding AddXColumnCommand}" />
+                        <Button Grid.Column="4" Content="{i18n:Localize AddYColumn}" Padding="6,2" FontSize="11"
+                                Command="{Binding AddYColumnCommand}" />
+                      </Grid>
+
+                      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Columns}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <StackPanel Orientation="Horizontal" Spacing="6" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TableColumnViewModel">
+                              <StackPanel Spacing="2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                  <TextBlock Text="{Binding Name}" FontSize="11" Foreground="#5B6270"
+                                             VerticalAlignment="Center" />
+                                  <Button Grid.Column="1" Content="×" Width="16" Height="16" Padding="0"
+                                          FontSize="11" Background="Transparent" BorderThickness="0"
+                                          Foreground="#8A8F99" Command="{Binding RemoveCommand}"
+                                          ToolTip.Tip="{i18n:Localize RemoveColumn}" />
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Cells}">
+                                  <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TableCellViewModel">
+                                      <Border Classes="paramInput" Margin="0,1">
+                                        <TextBox Text="{Binding Text}" Width="58" Height="20" MinHeight="0"
+                                                 FontSize="11" Padding="3,0" VerticalContentAlignment="Center" />
+                                      </Border>
+                                    </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                              </StackPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="{i18n:Localize AddRow}" Padding="6,2" FontSize="11"
+                                Command="{Binding AddRowCommand}" />
+                        <Button Content="{i18n:Localize RemoveRow}" Padding="6,2" FontSize="11"
+                                Command="{Binding RemoveRowCommand}" />
+                        <Button Content="{i18n:Localize RemoveTable}" Padding="6,2" FontSize="11"
+                                Command="{Binding RemoveTableCommand}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </StackPanel>
           </ScrollViewer>
         </Grid>
       </Border>

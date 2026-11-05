@@ -140,15 +140,7 @@ public static class ExpressionCompiler
         var x = CompileNode(point.X);
         var y = CompileNode(point.Y);
 
-        return context =>
-        {
-            var xValue = x(context);
-            var yValue = y(context);
-
-            return xValue.TryGetNumber(out var xNumber) && yValue.TryGetNumber(out var yNumber)
-                ? Value.FromPoint(xNumber, yNumber)
-                : Value.Undefined;
-        };
+        return context => ValueOperations.CombinePoints(x(context), y(context));
     }
 
     private static Func<EvaluationContext, Value> CompileRestricted(RestrictedNode restricted)

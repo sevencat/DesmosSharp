@@ -21,6 +21,16 @@
   "Maximum": "最大",
   "Step": "步长",
   "ParameterSettings": "滑块范围",
+  "Table": "表格",
+  "AddTable": "+ 表格",
+  "AddRow": "+ 行",
+  "RemoveRow": "− 行",
+  "AddXColumn": "+ x 列",
+  "AddYColumn": "+ y 列",
+  "RemoveColumn": "删除列",
+  "RemoveTable": "删除表格",
+  "Lines": "连线",
+  "LinesTip": "把同组 x/y 点按行顺序连成折线",
   "Play": "播放",
   "Pause": "暂停"
 }

@@ -52,6 +52,22 @@ public static class ValueOperations
         return Value.Undefined;
     }
 
+    /// <summary>
+    /// 把两个值组合成点，支持列表广播：
+    /// <c>(x_1, y_1)</c> 会得到与表格行数等长的点列表。
+    /// </summary>
+    public static Value CombinePoints(Value x, Value y)
+    {
+        if (x.Kind == ValueKind.List || y.Kind == ValueKind.List)
+        {
+            return Broadcast(x, y, static (a, b) => CombinePoints(a, b));
+        }
+
+        return x.TryGetNumber(out var xNumber) && y.TryGetNumber(out var yNumber)
+            ? Value.FromPoint(xNumber, yNumber)
+            : Value.Undefined;
+    }
+
     public static Value Factorial(Value value)
     {
         if (value.Kind == ValueKind.List)

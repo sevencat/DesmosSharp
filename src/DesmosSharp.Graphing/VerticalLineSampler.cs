@@ -8,7 +8,8 @@ public static class VerticalLineSampler
     public static IReadOnlyList<GraphSegment> Sample(
         CompiledExpression xExpression,
         GraphViewport viewport,
-        IReadOnlyDictionary<string, double>? parameters = null)
+        IReadOnlyDictionary<string, double>? parameters = null,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         ArgumentNullException.ThrowIfNull(xExpression);
 
@@ -17,7 +18,7 @@ public static class VerticalLineSampler
             return [];
         }
 
-        var context = PlotSampling.CreateContext(parameters);
+        var context = PlotSampling.CreateContext(parameters, columns);
 
         if (!xExpression.Evaluate(context).TryGetNumber(out var x) || !PlotSampling.IsUsable(x))
         {

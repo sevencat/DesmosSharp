@@ -1,3 +1,4 @@
+using DesmosSharp.Core.Parsing;
 using DesmosSharp.Graphing;
 using SkiaSharp;
 
@@ -12,11 +13,15 @@ public sealed class GraphRenderer
     private const float PointRadius = 4.5f;
     private const byte FillAlpha = 0x38;
 
+    private static readonly float[] DashIntervals = [5f, 4f];
+
     private static readonly SKColor BackgroundColor = new(0xFF, 0xFF, 0xFF);
     private static readonly SKColor MinorGridColor = new(0xEE, 0xF1, 0xF5);
     private static readonly SKColor MajorGridColor = new(0xE1, 0xE6, 0xEE);
     private static readonly SKColor AxisColor = new(0x9A, 0xA3, 0xAF);
     private static readonly SKColor LabelColor = new(0x8A, 0x8F, 0x99);
+
+    private readonly PlotGeometryCache _cache = new();
 
     public void Render(SKCanvas canvas, GraphRenderScene scene)
     {
@@ -140,7 +145,7 @@ public sealed class GraphRenderer
         }
     }
 
-    private static void DrawPlots(SKCanvas canvas, GraphRenderScene scene)
+    private void DrawPlots(SKCanvas canvas, GraphRenderScene scene)
     {
         if (scene.Plots.Count == 0)
         {
@@ -149,17 +154,24 @@ public sealed class GraphRenderer
 
         foreach (var plot in scene.Plots)
         {
-            var geometry = PlotGeometryBuilder.Build(plot, scene.Viewport, scene.Width, scene.Height);
+            var geometry = _cache.GetOrAdd(
+                new PlotGeometryCache.Key(plot, scene.Viewport, scene.Width, scene.Height),
+                () => PlotGeometryBuilder.Build(plot, scene.Viewport, scene.Width, scene.Height));
+
             if (geometry.IsEmpty)
             {
                 continue;
             }
 
             var color = ToColor(plot.ColorArgb);
+            var dashed = plot is InequalityPlot
+            {
+                Operator: CompareOperator.Less or CompareOperator.Greater,
+            };
 
             DrawFills(canvas, scene, geometry.Fills, color);
             DrawPolylines(canvas, scene, geometry.Polylines, color);
-            DrawSegments(canvas, scene, geometry.Segments, color);
+            DrawSegments(canvas, scene, geometry.Segments, color, dashed);
             DrawPoints(canvas, scene, geometry.Points, color);
         }
     }
@@ -233,14 +245,21 @@ public sealed class GraphRenderer
         SKCanvas canvas,
         GraphRenderScene scene,
         IReadOnlyList<GraphSegment> segments,
-        SKColor color)
+        SKColor color,
+        bool dashed = false)
     {
         if (segments.Count == 0)
         {
             return;
         }
 
+        using var dash = dashed ? SKPathEffect.CreateDash(DashIntervals, 0) : null;
         using var paint = CreateStrokePaint(color, BoundaryStrokeWidth);
+
+        if (dash is not null)
+        {
+            paint.PathEffect = dash;
+        }
 
         foreach (var segment in segments)
         {

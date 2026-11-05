@@ -16,6 +16,7 @@ public enum ExpressionKind
     Point,
     PointList,
     FunctionDefinition,
+    Regression,
 }
 
 public sealed class ExpressionAnalysis
@@ -39,6 +40,16 @@ public static class ExpressionAnalyzer
         ArgumentNullException.ThrowIfNull(root);
 
         var variables = VariableCollector.Collect(root, knownFunctions);
+
+        if (root is RegressionNode regression)
+        {
+            // 回归参数由拟合求解，不生成滑块
+            return new ExpressionAnalysis
+            {
+                Kind = ExpressionKind.Regression,
+                FreeVariables = VariableCollector.Collect(regression.Model, knownFunctions),
+            };
+        }
 
         if (root is CompareNode compare)
         {

@@ -59,7 +59,8 @@ public static class PlotGeometryBuilder
                     plot.Expression,
                     viewport,
                     Math.Max(1, (int)Math.Round(pixelWidth)),
-                    plot.Parameters),
+                    plot.Parameters,
+                    plot.Columns),
             },
 
             ParametricPlot plot => new PlotGeometry
@@ -71,7 +72,8 @@ public static class PlotGeometryBuilder
                     pixelHeight,
                     plot.TMin,
                     plot.TMax,
-                    plot.Parameters),
+                    plot.Parameters,
+                    plot.Columns),
             },
 
             PolarPlot plot => new PlotGeometry
@@ -83,7 +85,8 @@ public static class PlotGeometryBuilder
                     pixelHeight,
                     plot.ThetaMin,
                     plot.ThetaMax,
-                    plot.Parameters),
+                    plot.Parameters,
+                    plot.Columns),
             },
 
             ImplicitPlot plot => new PlotGeometry
@@ -93,7 +96,9 @@ public static class PlotGeometryBuilder
                     viewport,
                     pixelWidth,
                     pixelHeight,
-                    plot.Parameters),
+                    plot.Parameters,
+                    PlotGeometryBuilder.DefaultCellSize,
+                    plot.Columns),
             },
 
             InequalityPlot plot => InequalitySampler.Sample(
@@ -102,17 +107,28 @@ public static class PlotGeometryBuilder
                 viewport,
                 pixelWidth,
                 pixelHeight,
-                plot.Parameters),
+                plot.Parameters,
+                PlotGeometryBuilder.DefaultCellSize,
+                plot.Columns),
 
             VerticalLinePlot plot => new PlotGeometry
             {
-                Segments = VerticalLineSampler.Sample(plot.XExpression, viewport, plot.Parameters),
+                Segments = VerticalLineSampler.Sample(plot.XExpression, viewport, plot.Parameters, plot.Columns),
             },
 
             PointPlot plot => new PlotGeometry
             {
-                Points = PointSampler.Sample(plot.Expression, plot.Parameters),
+                Points = PointSampler.Sample(plot.Expression, plot.Parameters, plot.Columns),
             },
+
+            ScatterPlot plot => new PlotGeometry
+            {
+                Points = plot.Points,
+                Polylines = plot.Connected && plot.Points.Count > 1 ? [plot.Points] : [],
+            },
+
+            // 回归曲线的参数需要先用数据求解，由上层换算成 ExplicitPlot
+            RegressionPlot => PlotGeometry.Empty,
 
             _ => PlotGeometry.Empty,
         };
@@ -122,7 +138,9 @@ public static class PlotGeometryBuilder
 /// <summary>采样器共用的小工具。</summary>
 internal static class PlotSampling
 {
-    public static EvaluationContext CreateContext(IReadOnlyDictionary<string, double>? parameters)
+    public static EvaluationContext CreateContext(
+        IReadOnlyDictionary<string, double>? parameters,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         var context = EvaluationContext.Create();
 
@@ -131,6 +149,14 @@ internal static class PlotSampling
             foreach (var (name, value) in parameters)
             {
                 context.SetNumber(name, value);
+            }
+        }
+
+        if (columns is not null)
+        {
+            foreach (var (name, values) in columns)
+            {
+                context.SetVariable(name, Value.FromList(values));
             }
         }
 

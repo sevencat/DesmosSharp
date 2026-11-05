@@ -47,13 +47,24 @@ public partial class ExpressionItemViewModel : ObservableObject
     [ObservableProperty]
     private string? _errorMessage;
 
+    /// <summary>回归拟合结果，例如 <c>m = 2   b = 1</c>。</summary>
+    [ObservableProperty]
+    private string? _regressionSummary;
+
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
+    public bool HasRegressionSummary => !string.IsNullOrEmpty(RegressionSummary);
+
     partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasError));
+
+    partial void OnRegressionSummaryChanged(string? value) =>
+        OnPropertyChanged(nameof(HasRegressionSummary));
 
     /// <summary>重新解析当前文本，更新 <see cref="Compiled"/> 与 <see cref="ErrorMessage"/>。</summary>
     public void Refresh()
     {
+        RegressionSummary = null;
+
         if (string.IsNullOrWhiteSpace(Latex))
         {
             Plot = null;
@@ -62,7 +73,7 @@ public partial class ExpressionItemViewModel : ObservableObject
             return;
         }
 
-        if (PlotModelBuilder.TryBuild(Latex, out var plot, out var parameters, out var error))
+        if (PlotModelBuilder.TryBuild(Latex, _owner.KnownColumns, out var plot, out var parameters, out var error))
         {
             Plot = plot;
             ParameterNames = parameters;

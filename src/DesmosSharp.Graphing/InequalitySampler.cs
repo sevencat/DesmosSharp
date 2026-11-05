@@ -4,8 +4,8 @@ using DesmosSharp.Core.Parsing;
 namespace DesmosSharp.Graphing;
 
 /// <summary>
-/// 不等式区域：按屏幕网格逐行判定符号，把连续满足的单元格合并成矩形；
-/// 边界复用隐函数求解的等值线。
+/// 不等式区域：与隐函数共用同一张采样网格，
+/// 单元格按四角平均值判定符号并合并成矩形，边界复用等值线。
 /// </summary>
 public static class InequalitySampler
 {
@@ -16,57 +16,45 @@ public static class InequalitySampler
         double pixelWidth,
         double pixelHeight,
         IReadOnlyDictionary<string, double>? parameters = null,
-        double cellSize = PlotGeometryBuilder.DefaultCellSize)
+        double cellSize = PlotGeometryBuilder.DefaultCellSize,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         ArgumentNullException.ThrowIfNull(function);
 
-        if (!viewport.IsValid || pixelWidth <= 0 || pixelHeight <= 0 || cellSize <= 0)
+        var grid = ImplicitSampler.BuildGrid(function, viewport, pixelWidth, pixelHeight, parameters, cellSize, columns);
+
+        if (grid is null)
         {
             return PlotGeometry.Empty;
         }
 
-        var boundary = ImplicitSampler.Sample(function, viewport, pixelWidth, pixelHeight, parameters, cellSize);
-        var fills = SampleFills(function, comparison, viewport, pixelWidth, pixelHeight, parameters, cellSize);
-
-        return new PlotGeometry { Fills = fills, Segments = boundary };
+        return new PlotGeometry
+        {
+            Fills = BuildFills(grid, comparison),
+            Segments = ImplicitSampler.ExtractSegments(grid),
+        };
     }
 
-    private static List<GraphRect> SampleFills(
-        CompiledExpression function,
-        CompareOperator comparison,
-        GraphViewport viewport,
-        double pixelWidth,
-        double pixelHeight,
-        IReadOnlyDictionary<string, double>? parameters,
-        double cellSize)
+    private static List<GraphRect> BuildFills(ScalarGrid grid, CompareOperator comparison)
     {
         var fills = new List<GraphRect>();
-        var context = PlotSampling.CreateContext(parameters);
 
-        var columns = Math.Max(1, (int)Math.Ceiling(pixelWidth / cellSize));
-        var rows = Math.Max(1, (int)Math.Ceiling(pixelHeight / cellSize));
-        var cellWidth = viewport.Width / columns;
-        var cellHeight = viewport.Height / rows;
-
-        for (var row = 0; row < rows; row++)
+        for (var row = 0; row < grid.Rows - 1; row++)
         {
-            var y = viewport.YMin + (row + 0.5) * cellHeight;
-            context.SetNumber("y", y);
-
             var runStart = -1;
 
-            for (var column = 0; column <= columns; column++)
+            for (var column = 0; column <= grid.Columns - 1; column++)
             {
                 var satisfied = false;
 
-                if (column < columns)
+                if (column < grid.Columns - 1)
                 {
-                    var x = viewport.XMin + (column + 0.5) * cellWidth;
-                    context.SetNumber("x", x);
+                    var average = (grid.ValueAt(row, column) +
+                        grid.ValueAt(row, column + 1) +
+                        grid.ValueAt(row + 1, column) +
+                        grid.ValueAt(row + 1, column + 1)) / 4;
 
-                    satisfied = function.Evaluate(context).TryGetNumber(out var value) &&
-                        PlotSampling.IsUsable(value) &&
-                        IsSatisfied(value, comparison);
+                    satisfied = !double.IsNaN(average) && IsSatisfied(average, comparison);
                 }
 
                 if (satisfied)
@@ -82,10 +70,10 @@ public static class InequalitySampler
                 if (runStart >= 0)
                 {
                     fills.Add(new GraphRect(
-                        viewport.XMin + runStart * cellWidth,
-                        viewport.XMin + column * cellWidth,
-                        y - cellHeight / 2,
-                        y + cellHeight / 2));
+                        grid.XMin + runStart * grid.StepX,
+                        grid.XMin + column * grid.StepX,
+                        grid.YMin + row * grid.StepY,
+                        grid.YMin + (row + 1) * grid.StepY));
 
                     runStart = -1;
                 }

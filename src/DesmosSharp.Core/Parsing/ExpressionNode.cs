@@ -47,6 +47,9 @@ public sealed record PointNode(ExpressionNode X, ExpressionNode Y) : ExpressionN
 
 public sealed record CompareNode(CompareOperator Operator, ExpressionNode Left, ExpressionNode Right) : ExpressionNode;
 
+/// <summary>回归拟合，例如 <c>y_1 ~ m*x_1 + b</c>：右侧为模型，左侧为观测值。</summary>
+public sealed record RegressionNode(ExpressionNode Target, ExpressionNode Model) : ExpressionNode;
+
 /// <summary>带定义域限制的表达式，例如 <c>|x|{x &lt; 0}</c>。</summary>
 public sealed record RestrictedNode(ExpressionNode Value, ExpressionNode Condition) : ExpressionNode;
 

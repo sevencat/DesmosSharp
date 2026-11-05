@@ -52,7 +52,20 @@ public sealed class Parser
 
     private Token Current => _tokens[_index];
 
-    private ExpressionNode ParseExpression() => ParseComparison();
+    private ExpressionNode ParseExpression() => ParseRegression();
+
+    /// <summary>回归 <c>左 ~ 右</c> 的优先级低于所有算术与关系运算。</summary>
+    private ExpressionNode ParseRegression()
+    {
+        var target = ParseComparison();
+
+        if (Match(TokenKind.Tilde))
+        {
+            return new RegressionNode(target, ParseComparison());
+        }
+
+        return target;
+    }
 
     private ExpressionNode ParseComparison()
     {

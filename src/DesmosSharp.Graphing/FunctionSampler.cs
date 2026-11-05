@@ -17,7 +17,8 @@ public static class FunctionSampler
         CompiledExpression expression,
         GraphViewport viewport,
         int pixelWidth,
-        IReadOnlyDictionary<string, double>? parameters = null)
+        IReadOnlyDictionary<string, double>? parameters = null,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         ArgumentNullException.ThrowIfNull(expression);
 
@@ -28,15 +29,7 @@ public static class FunctionSampler
             return segments;
         }
 
-        var context = EvaluationContext.Create();
-        if (parameters is not null)
-        {
-            foreach (var (name, value) in parameters)
-            {
-                context.SetNumber(name, value);
-            }
-        }
-
+        var context = PlotSampling.CreateContext(parameters, columns);
         var step = viewport.Width / pixelWidth;
         var jumpLimit = viewport.Height * JumpThresholdFactor;
         var valueLimit = Math.Max(viewport.Height, 1) * 1e6;

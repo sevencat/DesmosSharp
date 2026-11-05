@@ -17,7 +17,8 @@ public static class ParametricSampler
         double pixelHeight,
         double tMin,
         double tMax,
-        IReadOnlyDictionary<string, double>? parameters = null)
+        IReadOnlyDictionary<string, double>? parameters = null,
+        IReadOnlyDictionary<string, IReadOnlyList<Value>>? columns = null)
     {
         ArgumentNullException.ThrowIfNull(pointExpression);
 
@@ -29,7 +30,7 @@ public static class ParametricSampler
         }
 
         var steps = Math.Clamp((int)Math.Round(Math.Max(pixelWidth, pixelHeight)), MinSteps, MaxSteps);
-        var context = PlotSampling.CreateContext(parameters);
+        var context = PlotSampling.CreateContext(parameters, columns);
         var jumpLimit = Math.Max(viewport.Width, viewport.Height) * 4;
 
         var current = new List<GraphPoint>();

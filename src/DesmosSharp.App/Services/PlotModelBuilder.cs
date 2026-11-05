@@ -16,6 +16,7 @@ internal static class PlotModelBuilder
 
     public static bool TryBuild(
         string text,
+        IReadOnlyCollection<string>? knownColumns,
         out PlotItem? plot,
         out IReadOnlyList<string> parameters,
         out string? error)
@@ -33,7 +34,7 @@ internal static class PlotModelBuilder
         {
             var node = Parser.Parse(text);
             var analysis = ExpressionAnalyzer.Analyze(node);
-            var built = BuildPlot(node, analysis, out var buildError);
+            var built = BuildPlot(node, analysis, knownColumns, out var buildError);
 
             if (built is null)
             {
@@ -43,9 +44,14 @@ internal static class PlotModelBuilder
             }
 
             plot = built;
-            parameters = analysis.FreeVariables
-                .Where(name => !ReservedVariables.Contains(name))
-                .ToList();
+
+            // 表格列名是数据而不是滑块参数；回归参数由拟合结果决定，同样不生成滑块
+            parameters = built is RegressionPlot
+                ? []
+                : analysis.FreeVariables
+                    .Where(name => !ReservedVariables.Contains(name))
+                    .Where(name => knownColumns?.Contains(name) != true)
+                    .ToList();
 
             return true;
         }
@@ -59,6 +65,7 @@ internal static class PlotModelBuilder
     private static PlotItem? BuildPlot(
         ExpressionNode node,
         ExpressionAnalysis analysis,
+        IReadOnlyCollection<string>? knownColumns,
         out string? error)
     {
         error = null;
@@ -85,6 +92,19 @@ internal static class PlotModelBuilder
             case ExpressionKind.Point:
             case ExpressionKind.PointList:
                 return new PointPlot(ExpressionCompiler.Compile(body), null, 0);
+
+            case ExpressionKind.Regression when node is RegressionNode regression:
+                return new RegressionPlot(
+                    ExpressionCompiler.Compile(regression.Target),
+                    regression.Model,
+                    analysis.FreeVariables.FirstOrDefault(name =>
+                        name.StartsWith("x_", StringComparison.Ordinal) &&
+                        knownColumns?.Contains(name) == true),
+                    analysis.FreeVariables
+                        .Where(name => !ReservedVariables.Contains(name))
+                        .Where(name => knownColumns?.Contains(name) != true)
+                        .ToList(),
+                    0);
 
             case ExpressionKind.ImplicitCurve when node is CompareNode implicitEquation:
                 return new ImplicitPlot(ExpressionCompiler.Compile(Difference(implicitEquation)), null, 0);

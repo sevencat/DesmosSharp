@@ -113,6 +113,7 @@ public static class Lexer
                 '=' => TokenKind.Equal,
                 '<' or '≤' => TokenKind.Less,
                 '>' or '≥' => TokenKind.Greater,
+                '~' => TokenKind.Tilde,
                 _ => (TokenKind?)null,
             };
 

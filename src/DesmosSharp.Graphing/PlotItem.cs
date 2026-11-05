@@ -4,7 +4,11 @@ using DesmosSharp.Core.Parsing;
 namespace DesmosSharp.Graphing;
 
 /// <summary>一条待绘制图形元素的公共基类。</summary>
-public abstract record PlotItem(uint ColorArgb);
+public abstract record PlotItem(uint ColorArgb)
+{
+    /// <summary>数据表的列（列名 -> 每行取值），表达式可直接引用列名。</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<Value>>? Columns { get; init; }
+}
 
 /// <summary>显函数 <c>y = f(x)</c>。</summary>
 public sealed record ExplicitPlot(
@@ -45,6 +49,22 @@ public sealed record InequalityPlot(
 public sealed record VerticalLinePlot(
     CompiledExpression XExpression,
     IReadOnlyDictionary<string, double>? Parameters,
+    uint ColorArgb) : PlotItem(ColorArgb);
+
+/// <summary>直接给定坐标的散点（数据表）；<paramref name="Connected"/> 为真时按行顺序连成折线。</summary>
+public sealed record ScatterPlot(
+    IReadOnlyList<GraphPoint> Points,
+    uint ColorArgb,
+    bool Connected = false) : PlotItem(ColorArgb);
+
+/// <summary>
+/// 回归拟合 <c>目标 ~ 模型</c>：参数由数据求解，因此不在几何层直接绘制。
+/// </summary>
+public sealed record RegressionPlot(
+    CompiledExpression Target,
+    ExpressionNode Model,
+    string? XColumnName,
+    IReadOnlyList<string> ParameterNames,
     uint ColorArgb) : PlotItem(ColorArgb);
 
 /// <summary>点或点列（列表求值后得到多个点）。</summary>
