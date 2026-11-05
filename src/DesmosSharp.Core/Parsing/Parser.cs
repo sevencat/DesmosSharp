@@ -215,7 +215,9 @@ public sealed class Parser
                 return ParsePiecewise();
 
             default:
-                throw new ParseException($"此处不应出现 \"{token.Text}\"", token.Position);
+                throw token.Kind == TokenKind.EndOfInput
+                    ? new ParseException("表达式在此处缺少内容", token.Position)
+                    : new ParseException($"此处不应出现 \"{token.Text}\"", token.Position);
         }
     }
 
@@ -328,11 +330,16 @@ public sealed class Parser
 
     private void Expect(TokenKind kind)
     {
-        if (Current.Kind != kind)
+        if (Current.Kind == kind)
         {
-            throw new ParseException($"缺少 \"{kind}\"，实际为 \"{Current.Text}\"", Current.Position);
+            _index++;
+            return;
         }
 
-        _index++;
+        throw Current.Kind == TokenKind.EndOfInput && kind == TokenKind.EndOfInput
+            ? new ParseException("表达式不完整", Current.Position)
+            : kind == TokenKind.EndOfInput
+                ? new ParseException($"表达式末尾有多余内容 \"{Current.Text}\"", Current.Position)
+                : new ParseException($"缺少 \"{kind}\"，实际为 \"{Current.Text}\"", Current.Position);
     }
 }

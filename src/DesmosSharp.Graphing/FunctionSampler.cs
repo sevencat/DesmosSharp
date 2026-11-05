@@ -4,8 +4,11 @@ namespace DesmosSharp.Graphing;
 
 public readonly record struct GraphPoint(double X, double Y);
 
-/// <summary>一条待绘制的显函数曲线（已编译，颜色为 ARGB）。</summary>
-public sealed record PlottedFunction(CompiledExpression Expression, uint ColorArgb);
+/// <summary>一条待绘制的显函数曲线（已编译，颜色为 ARGB，可带参数取值）。</summary>
+public sealed record PlottedFunction(
+    CompiledExpression Expression,
+    uint ColorArgb,
+    IReadOnlyDictionary<string, double>? Parameters = null);
 
 /// <summary>
 /// 显函数采样：按屏幕像素列求值，并在断点、无穷发散处断开线段，
@@ -19,7 +22,8 @@ public static class FunctionSampler
     public static IReadOnlyList<List<GraphPoint>> Sample(
         CompiledExpression expression,
         GraphViewport viewport,
-        int pixelWidth)
+        int pixelWidth,
+        IReadOnlyDictionary<string, double>? parameters = null)
     {
         ArgumentNullException.ThrowIfNull(expression);
 
@@ -31,6 +35,14 @@ public static class FunctionSampler
         }
 
         var context = EvaluationContext.Create();
+        if (parameters is not null)
+        {
+            foreach (var (name, value) in parameters)
+            {
+                context.SetNumber(name, value);
+            }
+        }
+
         var step = viewport.Width / pixelWidth;
         var jumpLimit = viewport.Height * JumpThresholdFactor;
         var valueLimit = Math.Max(viewport.Height, 1) * 1e6;

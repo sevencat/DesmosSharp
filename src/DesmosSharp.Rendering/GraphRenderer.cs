@@ -148,7 +148,11 @@ public sealed class GraphRenderer
 
         foreach (var function in scene.Functions)
         {
-            var segments = FunctionSampler.Sample(function.Expression, scene.Viewport, pixelWidth);
+            var segments = FunctionSampler.Sample(
+                function.Expression,
+                scene.Viewport,
+                pixelWidth,
+                function.Parameters);
             if (segments.Count == 0)
             {
                 continue;
