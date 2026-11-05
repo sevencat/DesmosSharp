@@ -1,0 +1,88 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesmosSharp.App.ViewModels"
+        xmlns:controls="using:DesmosSharp.App.Controls"
+        xmlns:i18n="using:DesmosSharp.App.Localization"
+        x:Class="DesmosSharp.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{i18n:Localize UntitledGraph}"
+        Width="1280" Height="800"
+        MinWidth="900" MinHeight="600"
+        Background="#F5F6F8">
+
+  <Grid RowDefinitions="56,*,28">
+
+    <!-- 顶部栏 -->
+    <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#E1E4EA" BorderThickness="0,0,0,1" Padding="16,0">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Border Width="28" Height="28" CornerRadius="8" Background="#3F51B5" />
+          <TextBlock Text="DesmosSharp" FontSize="18" FontWeight="SemiBold"
+                     Foreground="#1F2329" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <ComboBox Width="120" Margin="0,0,8,0" VerticalAlignment="Center"
+                    ItemsSource="{Binding Localization.Languages}"
+                    SelectedItem="{Binding Localization.SelectedLanguage}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="i18n:LanguageOption">
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="{i18n:Localize Open}" Padding="12,6" IsEnabled="False" />
+          <Button Content="{i18n:Localize Save}" Padding="12,6" IsEnabled="False" />
+          <Button Content="{i18n:Localize Settings}" Padding="12,6" IsEnabled="False" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- 主体：表达式列表 + 图形画板 -->
+    <Grid Grid.Row="1" ColumnDefinitions="380,*">
+
+      <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E1E4EA" BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="48,*">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="16,0">
+            <TextBlock x:Name="ExpressionsHeader"
+                       Text="{i18n:Localize Expressions}"
+                       FontWeight="SemiBold" Foreground="#1F2329" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="{i18n:Localize AddExpression}" Padding="10,4"
+                    Command="{Binding AddExpressionCommand}" VerticalAlignment="Center" />
+          </Grid>
+
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Expressions}" Margin="8,0,8,8">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ExpressionItemViewModel">
+                  <Grid ColumnDefinitions="24,Auto,*" Height="44">
+                    <TextBlock Text="{Binding Number}" Foreground="#8A8F99" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Width="12" Height="12" CornerRadius="6"
+                            Background="{Binding Color}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBox Grid.Column="2" Text="{Binding Latex}"
+                             PlaceholderText="{i18n:Localize ExpressionPlaceholder}"
+                             VerticalAlignment="Center" Background="Transparent" BorderThickness="0" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <Panel Grid.Column="1">
+        <controls:GraphSurface />
+        <TextBlock Text="{i18n:Localize GraphPlaceholder}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="#B0B6C0" IsHitTestVisible="False" />
+      </Panel>
+
+    </Grid>
+
+    <!-- 状态栏 -->
+    <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4EA" BorderThickness="0,1,0,0" Padding="12,0">
+      <TextBlock Text="{i18n:Localize StatusReady}" FontSize="12" Foreground="#8A8F99" VerticalAlignment="Center" />
+    </Border>
+
+  </Grid>
+</Window>

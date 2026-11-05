@@ -1,0 +1,11 @@
+{
+  "UntitledGraph": "Untitled Graph",
+  "Open": "Open",
+  "Save": "Save",
+  "Settings": "Settings",
+  "Expressions": "Expressions",
+  "AddExpression": "+ Add",
+  "ExpressionPlaceholder": "Enter an expression, e.g. y=sin(x)",
+  "GraphPlaceholder": "Graph canvas · Skia rendering arrives in P2",
+  "StatusReady": "Ready"
+}

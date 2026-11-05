@@ -1,0 +1,11 @@
+{
+  "UntitledGraph": "无标题图形",
+  "Open": "打开",
+  "Save": "保存",
+  "Settings": "设置",
+  "Expressions": "表达式",
+  "AddExpression": "+ 新增",
+  "ExpressionPlaceholder": "输入表达式，例如 y=sin(x)",
+  "GraphPlaceholder": "图形画板 · P2 阶段接入 Skia 渲染",
+  "StatusReady": "就绪"
+}
