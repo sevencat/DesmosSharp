@@ -89,6 +89,68 @@ public class ParserTests
     }
 
     [Fact]
+    public void Consecutive_letters_split_into_single_letter_variables()
+    {
+        var node = Parser.Parse("ax");
+
+        var binary = Assert.IsType<BinaryNode>(node);
+        Assert.Equal(BinaryOperator.Multiply, binary.Operator);
+        Assert.Equal("a", Assert.IsType<IdentifierNode>(binary.Left).Name);
+        Assert.Equal("x", Assert.IsType<IdentifierNode>(binary.Right).Name);
+    }
+
+    [Fact]
+    public void Keywords_are_recognized_inside_letter_runs()
+    {
+        var node = Parser.Parse("sinx");
+
+        var call = Assert.IsType<CallNode>(node);
+        Assert.Equal("sin", call.Name);
+        Assert.Equal("x", Assert.IsType<IdentifierNode>(Assert.Single(call.Arguments)).Name);
+    }
+
+    [Fact]
+    public void Trailing_digits_become_subscripts()
+    {
+        var node = Parser.Parse("y1 + x2");
+
+        var binary = Assert.IsType<BinaryNode>(node);
+        Assert.Equal("y_1", Assert.IsType<IdentifierNode>(binary.Left).Name);
+        Assert.Equal("x_2", Assert.IsType<IdentifierNode>(binary.Right).Name);
+    }
+
+    [Theory]
+    [InlineData("sin x")]
+    [InlineData("sin(x)")]
+    public void Function_can_be_applied_without_parentheses(string text)
+    {
+        var call = Assert.IsType<CallNode>(Parser.Parse(text));
+
+        Assert.Equal("sin", call.Name);
+        Assert.Equal("x", Assert.IsType<IdentifierNode>(Assert.Single(call.Arguments)).Name);
+    }
+
+    [Fact]
+    public void Juxtaposed_function_only_consumes_the_power_operand()
+    {
+        var node = Parser.Parse("sin x + 1");
+
+        var binary = Assert.IsType<BinaryNode>(node);
+        Assert.Equal(BinaryOperator.Add, binary.Operator);
+        Assert.IsType<CallNode>(binary.Left);
+        Assert.IsType<NumberNode>(binary.Right);
+    }
+
+    [Fact]
+    public void Subscripted_log_takes_a_juxtaposed_argument()
+    {
+        var call = Assert.IsType<CallNode>(Parser.Parse("log_2 x"));
+
+        Assert.Equal("log_2", call.Name);
+        Assert.Equal("x", Assert.IsType<IdentifierNode>(Assert.Single(call.Arguments)).Name);
+    }
+
+    [Fact]
     public void Subscripts_are_part_of_the_identifier()
     {
         var node = Parser.Parse("x_1 + log_2(8)");

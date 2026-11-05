@@ -70,12 +70,7 @@
         </Grid>
       </Border>
 
-      <Panel Grid.Column="1">
-        <controls:GraphSurface />
-        <TextBlock Text="{i18n:Localize GraphPlaceholder}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Foreground="#B0B6C0" IsHitTestVisible="False" />
-      </Panel>
+      <controls:GraphView Grid.Column="1" Functions="{Binding Functions}" />
 
     </Grid>
 

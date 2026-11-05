@@ -49,6 +49,17 @@ public class EvaluationTests
         Assert.Equal(expected, Evaluate(text), 9);
     }
 
+    [Theory]
+    [InlineData("sin x", 1)]
+    [InlineData("sinx", 1)]
+    [InlineData("log_2 x", 3)]
+    public void Desmos_style_juxtaposition_evaluates(string text, double expected)
+    {
+        var x = text.StartsWith("log", StringComparison.Ordinal) ? 8 : Math.PI / 2;
+
+        Assert.Equal(expected, Evaluate(text, ("x", x)), 9);
+    }
+
     [Fact]
     public void Trig_follows_radians_by_default()
     {

@@ -201,7 +201,7 @@ public static class ExpressionCompiler
     private static Value ResolveName(string name, EvaluationContext context) =>
         context.TryGetVariable(name, out var value) ? value : ResolveConstant(name);
 
-    private static Value ResolveConstant(string name) => name switch
+    private static Value ResolveConstant(string name) => name.ToLowerInvariant() switch
     {
         "pi" => Value.FromNumber(Math.PI),
         "tau" => Value.FromNumber(Math.Tau),

@@ -1,3 +1,5 @@
+using DesmosSharp.Core.Evaluation;
+
 namespace DesmosSharp.Core.Parsing;
 
 /// <summary>
@@ -189,6 +191,13 @@ public sealed class Parser
                 if (Current.Kind == TokenKind.LeftParen)
                 {
                     return ParseCall(token.Text);
+                }
+
+                // 函数名后直接跟操作数：sin x、log_2 x、sqrt 4
+                // 与 Desmos 一致，函数只吃下一个「幂级」操作数，因此 sin x^2 = sin(x^2)、sin x * 2 = sin(x)*2
+                if (StartsAtom(Current.Kind) && BuiltinFunctions.TryResolve(token.Text, out _))
+                {
+                    return new CallNode(token.Text, [ParsePower()]);
                 }
 
                 return new IdentifierNode(token.Text);

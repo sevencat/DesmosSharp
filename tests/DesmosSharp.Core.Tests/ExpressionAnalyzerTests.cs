@@ -29,6 +29,15 @@ public class ExpressionAnalyzerTests
     }
 
     [Fact]
+    public void Slider_style_expression_exposes_every_free_variable()
+    {
+        var analysis = ExpressionAnalyzer.Analyze(Parser.Parse("y=ax+b"));
+
+        Assert.Equal(ExpressionKind.ExplicitFunction, analysis.Kind);
+        Assert.Equal(["a", "x", "b"], analysis.FreeVariables);
+    }
+
+    [Fact]
     public void Free_variables_exclude_the_assigned_target()
     {
         var analysis = ExpressionAnalyzer.Analyze(Parser.Parse("y=sin(x)+m"));

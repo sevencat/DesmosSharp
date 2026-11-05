@@ -54,6 +54,9 @@ public static class BuiltinFunctions
         Add("npr", Permutations);
     }
 
+    /// <summary>全部内置函数名，供词法分析器识别保留字。</summary>
+    public static IReadOnlyCollection<string> Names => Registry.Keys;
+
     public static bool TryResolve(string name, out BuiltinFunction function)
     {
         if (Registry.TryGetValue(name, out function!))

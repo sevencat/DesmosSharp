@@ -11,6 +11,10 @@ public readonly record struct GraphViewport(double XMin, double XMax, double YMi
 
     public double Height => YMax - YMin;
 
+    public double CenterX => (XMin + XMax) / 2;
+
+    public double CenterY => (YMin + YMax) / 2;
+
     public bool IsValid =>
         XMax > XMin &&
         YMax > YMin &&
@@ -24,4 +28,64 @@ public readonly record struct GraphViewport(double XMin, double XMax, double YMi
     /// <summary>屏幕像素坐标 -> 数学坐标。</summary>
     public (double X, double Y) ToGraph(double pixelX, double pixelY, double pixelWidth, double pixelHeight)
         => (XMin + pixelX / pixelWidth * Width, YMax - pixelY / pixelHeight * Height);
+
+    /// <summary>以某个屏幕点为锚点缩放：锚点下的数学坐标保持不动。</summary>
+    public GraphViewport ZoomAt(
+        double pixelX,
+        double pixelY,
+        double factor,
+        double pixelWidth,
+        double pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0 || factor <= 0 || !double.IsFinite(factor))
+        {
+            return this;
+        }
+
+        var (anchorX, anchorY) = ToGraph(pixelX, pixelY, pixelWidth, pixelHeight);
+
+        return new GraphViewport(
+            anchorX + (XMin - anchorX) * factor,
+            anchorX + (XMax - anchorX) * factor,
+            anchorY + (YMin - anchorY) * factor,
+            anchorY + (YMax - anchorY) * factor);
+    }
+
+    /// <summary>按像素位移平移：拖动内容向右，视口向左移动。</summary>
+    public GraphViewport PanByPixels(double deltaX, double deltaY, double pixelWidth, double pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0)
+        {
+            return this;
+        }
+
+        var shiftX = -deltaX * Width / pixelWidth;
+        var shiftY = deltaY * Height / pixelHeight;
+
+        return new GraphViewport(XMin + shiftX, XMax + shiftX, YMin + shiftY, YMax + shiftY);
+    }
+
+    /// <summary>让 x/y 每像素代表相同的数学长度（Desmos 默认的等比坐标）。</summary>
+    public GraphViewport WithSquareUnits(double pixelWidth, double pixelHeight)
+    {
+        if (pixelWidth <= 0 || pixelHeight <= 0)
+        {
+            return this;
+        }
+
+        var unitsPerPixel = Math.Max(Width / pixelWidth, Height / pixelHeight);
+        if (!double.IsFinite(unitsPerPixel) || unitsPerPixel <= 0)
+        {
+            return this;
+        }
+
+        var halfWidth = unitsPerPixel * pixelWidth / 2;
+        var halfHeight = unitsPerPixel * pixelHeight / 2;
+
+        return new GraphViewport(
+            CenterX - halfWidth,
+            CenterX + halfWidth,
+            CenterY - halfHeight,
+            CenterY + halfHeight);
+    }
 }

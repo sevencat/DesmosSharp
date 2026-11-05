@@ -1,9 +1,12 @@
 using System.Globalization;
-using System.Text;
+using DesmosSharp.Core.Evaluation;
 
 namespace DesmosSharp.Core.Parsing;
 
-/// <summary>把表达式文本切分为记号序列。</summary>
+/// <summary>
+/// 把表达式文本切分为记号序列。
+/// 与 Desmos 一致：连续的字母会被拆成「关键字 + 单字母变量」，例如 <c>ax</c> 是 <c>a*x</c>、<c>sinx</c> 是 <c>sin(x)</c>。
+/// </summary>
 public static class Lexer
 {
     private static readonly Dictionary<char, string> UnicodeNames = new()
@@ -16,6 +19,9 @@ public static class Lexer
         ['∏'] = "prod",
         ['∞'] = "infinity",
     };
+
+    /// <summary>可作为整体识别的保留名（函数与常量），按长度降序做最长匹配。</summary>
+    private static readonly string[] Keywords = BuildKeywords();
 
     public static IReadOnlyList<Token> Tokenize(string text)
     {
@@ -62,9 +68,9 @@ public static class Lexer
                 continue;
             }
 
-            if (TryReadIdentifier(text, ref index, out var name))
+            if (char.IsLetter(current))
             {
-                tokens.Add(new Token(TokenKind.Identifier, name, start));
+                ReadIdentifiers(text, ref index, tokens);
                 continue;
             }
 
@@ -123,55 +129,134 @@ public static class Lexer
         return tokens;
     }
 
-    private static bool TryReadIdentifier(string text, ref int index, out string name)
+    private static void ReadIdentifiers(string text, ref int index, List<Token> tokens)
     {
-        if (index >= text.Length || !char.IsLetter(text[index]))
-        {
-            name = string.Empty;
-            return false;
-        }
-
-        var builder = new StringBuilder();
-        builder.Append(text[index]);
-        index++;
-
+        var runStart = index;
         while (index < text.Length && char.IsLetterOrDigit(text[index]))
         {
-            builder.Append(text[index]);
             index++;
         }
 
-        // 下标：x_1、log_2、x_{12}
-        if (index < text.Length && text[index] == '_')
+        var run = text.AsSpan(runStart, index - runStart);
+        var offset = 0;
+
+        while (offset < run.Length)
         {
-            builder.Append('_');
-            index++;
+            string name;
+            var keyword = MatchKeyword(run, offset);
 
-            if (index < text.Length && text[index] == '{')
+            if (keyword is not null)
             {
-                index++;
-                while (index < text.Length && text[index] != '}')
-                {
-                    builder.Append(text[index]);
-                    index++;
-                }
-
-                if (index < text.Length)
-                {
-                    index++; // 跳过 '}'
-                }
+                name = keyword;
+                offset += keyword.Length;
             }
             else
             {
-                while (index < text.Length && char.IsLetterOrDigit(text[index]))
-                {
-                    builder.Append(text[index]);
-                    index++;
-                }
+                name = run[offset].ToString();
+                offset++;
+            }
+
+            // 紧随其后的数字视为下标：y1 -> y_1、log2 -> log_2
+            var digitsStart = offset;
+            while (offset < run.Length && char.IsDigit(run[offset]))
+            {
+                offset++;
+            }
+
+            if (offset > digitsStart)
+            {
+                name = $"{name}_{run[digitsStart..offset]}";
+            }
+
+            tokens.Add(new Token(TokenKind.Identifier, name, runStart));
+        }
+
+        // 显式下标：x_1、log_2、x_{12}
+        if (index < text.Length && text[index] == '_' && tokens.Count > 0)
+        {
+            var last = tokens[^1];
+            if (last.Kind != TokenKind.Identifier)
+            {
+                throw new ParseException("下标缺少主体", index);
+            }
+
+            index++;
+            var subscript = ReadSubscript(text, ref index);
+            if (subscript.Length == 0)
+            {
+                throw new ParseException("下标缺少内容", index);
+            }
+
+            tokens[^1] = last with { Text = $"{last.Text}_{subscript}" };
+        }
+    }
+
+    private static string ReadSubscript(string text, ref int index)
+    {
+        if (index >= text.Length)
+        {
+            return string.Empty;
+        }
+
+        if (text[index] != '{')
+        {
+            var start = index;
+            while (index < text.Length && (char.IsLetterOrDigit(text[index]) || text[index] == '.'))
+            {
+                index++;
+            }
+
+            return text[start..index];
+        }
+
+        index++; // 跳过 '{'
+        var bodyStart = index;
+        while (index < text.Length && text[index] != '}')
+        {
+            index++;
+        }
+
+        var body = text[bodyStart..index];
+        if (index < text.Length)
+        {
+            index++; // 跳过 '}'
+        }
+
+        return body;
+    }
+
+    private static string? MatchKeyword(ReadOnlySpan<char> run, int offset)
+    {
+        var rest = run[offset..];
+
+        foreach (var keyword in Keywords)
+        {
+            if (rest.StartsWith(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return keyword;
             }
         }
 
-        name = builder.ToString();
-        return true;
+        return null;
+    }
+
+    private static string[] BuildKeywords()
+    {
+        // 关键字表直接取自内置函数表，避免两处维护造成漂移；
+        // 其余为常量与暂未实现的运算符名（sum/prod 待 P5 支持）。
+        var keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "pi", "tau", "theta", "infinity", "sum", "prod",
+        };
+
+        foreach (var name in BuiltinFunctions.Names)
+        {
+            if (name.Length >= 2)
+            {
+                keywords.Add(name);
+            }
+        }
+
+        return keywords.OrderByDescending(keyword => keyword.Length).ToArray();
     }
 }
