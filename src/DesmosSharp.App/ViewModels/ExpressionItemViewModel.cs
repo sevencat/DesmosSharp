@@ -3,7 +3,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesmosSharp.App.Services;
-using DesmosSharp.Core.Evaluation;
+using DesmosSharp.Graphing;
 
 namespace DesmosSharp.App.ViewModels;
 
@@ -23,8 +23,8 @@ public partial class ExpressionItemViewModel : ObservableObject
 
     public Guid Id { get; } = Guid.NewGuid();
 
-    /// <summary>解析成功后的可绘制表达式；解析失败或非显函数时为 null。</summary>
-    public CompiledExpression? Compiled { get; private set; }
+    /// <summary>解析成功后的可绘制图形；解析失败或无需绘制的行（数字、函数定义）为 null。</summary>
+    public PlotItem? Plot { get; private set; }
 
     /// <summary>该行引用到的自由参数（不含自变量 x/y）。</summary>
     public IReadOnlyList<string> ParameterNames { get; private set; } = [];
@@ -56,21 +56,21 @@ public partial class ExpressionItemViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(Latex))
         {
-            Compiled = null;
+            Plot = null;
             ParameterNames = [];
             ErrorMessage = null;
             return;
         }
 
-        if (PlotModelBuilder.TryBuild(Latex, out var compiled, out var parameters, out var error))
+        if (PlotModelBuilder.TryBuild(Latex, out var plot, out var parameters, out var error))
         {
-            Compiled = compiled;
+            Plot = plot;
             ParameterNames = parameters;
             ErrorMessage = null;
         }
         else
         {
-            Compiled = null;
+            Plot = null;
             ParameterNames = [];
             ErrorMessage = error;
         }

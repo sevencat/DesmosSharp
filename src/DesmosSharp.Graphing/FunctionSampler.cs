@@ -4,12 +4,6 @@ namespace DesmosSharp.Graphing;
 
 public readonly record struct GraphPoint(double X, double Y);
 
-/// <summary>一条待绘制的显函数曲线（已编译，颜色为 ARGB，可带参数取值）。</summary>
-public sealed record PlottedFunction(
-    CompiledExpression Expression,
-    uint ColorArgb,
-    IReadOnlyDictionary<string, double>? Parameters = null);
-
 /// <summary>
 /// 显函数采样：按屏幕像素列求值，并在断点、无穷发散处断开线段，
 /// 避免把 <c>1/x</c> 这类渐近线连成一条竖线。

@@ -23,7 +23,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private bool _isRestoring;
     private bool _suppressCurveRebuild;
-    private IReadOnlyList<PlottedFunction> _functions = [];
+    private IReadOnlyList<PlotItem> _plots = [];
 
     public MainWindowViewModel()
     {
@@ -49,11 +49,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ExpressionItemViewModel> Expressions { get; }
 
-    /// <summary>供画板绘制的已编译函数。</summary>
-    public IReadOnlyList<PlottedFunction> Functions
+    /// <summary>供画板绘制的图形元素。</summary>
+    public IReadOnlyList<PlotItem> Plots
     {
-        get => _functions;
-        private set => SetProperty(ref _functions, value);
+        get => _plots;
+        private set => SetProperty(ref _plots, value);
     }
 
     [RelayCommand]
@@ -355,11 +355,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RebuildCurves()
     {
-        var built = new List<PlottedFunction>();
+        var built = new List<PlotItem>();
 
         foreach (var row in Expressions)
         {
-            if (!row.IsVisible || row.Compiled is not { } compiled)
+            if (!row.IsVisible || row.Plot is not { } plot)
             {
                 continue;
             }
@@ -379,11 +379,24 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
 
-            built.Add(new PlottedFunction(compiled, PlotModelBuilder.ToArgb(row.Color), values));
+            built.Add(BindParameters(plot, values) with { ColorArgb = PlotModelBuilder.ToArgb(row.Color) });
         }
 
-        Functions = built;
+        Plots = built;
     }
+
+    /// <summary>把滑块当前取值写入图形元素。</summary>
+    private static PlotItem BindParameters(PlotItem plot, IReadOnlyDictionary<string, double>? values) => plot switch
+    {
+        ExplicitPlot item => item with { Parameters = values },
+        ParametricPlot item => item with { Parameters = values },
+        PolarPlot item => item with { Parameters = values },
+        ImplicitPlot item => item with { Parameters = values },
+        InequalityPlot item => item with { Parameters = values },
+        VerticalLinePlot item => item with { Parameters = values },
+        PointPlot item => item with { Parameters = values },
+        _ => plot,
+    };
 
     private void UpdateAnimationTimer()
     {

@@ -1,5 +1,6 @@
 using Avalonia.Headless.XUnit;
 using DesmosSharp.App.ViewModels;
+using DesmosSharp.Graphing;
 
 namespace DesmosSharp.App.HeadlessTests;
 
@@ -11,7 +12,7 @@ public class ExpressionListTests
         var viewModel = new MainWindowViewModel();
 
         Assert.Equal(2, viewModel.Expressions.Count);
-        Assert.Equal(2, viewModel.Functions.Count);
+        Assert.Equal(2, viewModel.Plots.Count);
     }
 
     [AvaloniaFact]
@@ -24,20 +25,21 @@ public class ExpressionListTests
 
         Assert.True(row.HasError);
         Assert.NotNull(row.ErrorMessage);
-        Assert.Null(row.Compiled);
-        Assert.Single(viewModel.Functions);
+        Assert.Null(row.Plot);
+        Assert.Single(viewModel.Plots);
     }
 
     [AvaloniaFact]
-    public void Unsupported_kind_reports_an_error()
+    public void Implicit_equation_is_drawn()
     {
         var viewModel = new MainWindowViewModel();
         var row = viewModel.Expressions[0];
 
         row.Latex = "x^2+y^2=1";
 
-        Assert.True(row.HasError);
-        Assert.Null(row.Compiled);
+        Assert.False(row.HasError);
+        Assert.IsType<ImplicitPlot>(row.Plot);
+        Assert.Equal(2, viewModel.Plots.Count);
     }
 
     [AvaloniaFact]
@@ -47,7 +49,7 @@ public class ExpressionListTests
 
         viewModel.Expressions[0].IsVisible = false;
 
-        Assert.Single(viewModel.Functions);
+        Assert.Single(viewModel.Plots);
     }
 
     [AvaloniaFact]
@@ -134,12 +136,12 @@ public class ExpressionListTests
 
         viewModel.ClearAllCommand.Execute(null);
         Assert.Empty(viewModel.Expressions);
-        Assert.Empty(viewModel.Functions);
+        Assert.Empty(viewModel.Plots);
 
         viewModel.UndoCommand.Execute(null);
 
         Assert.Equal(2, viewModel.Expressions.Count);
-        Assert.Equal(2, viewModel.Functions.Count);
+        Assert.Equal(2, viewModel.Plots.Count);
     }
 
     [AvaloniaFact]
@@ -147,11 +149,11 @@ public class ExpressionListTests
     {
         var viewModel = new MainWindowViewModel();
         var row = viewModel.Expressions[0];
-        var before = viewModel.Functions[0].ColorArgb;
+        var before = viewModel.Plots[0].ColorArgb;
 
         viewModel.CycleColor(row);
 
-        Assert.NotEqual(before, viewModel.Functions[0].ColorArgb);
+        Assert.NotEqual(before, viewModel.Plots[0].ColorArgb);
     }
 
     [AvaloniaFact]

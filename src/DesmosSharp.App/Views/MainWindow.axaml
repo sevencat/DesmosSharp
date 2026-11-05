@@ -136,7 +136,8 @@
                                          Foreground="#5B6270" VerticalAlignment="Center" />
 
                               <Slider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
-                                      Value="{Binding Value}" Margin="6,0" VerticalAlignment="Center" />
+                                      Value="{Binding Value}" Margin="6,0" VerticalAlignment="Center"
+                                      DoubleTapped="OnParameterDoubleTapped" />
 
                               <TextBox Grid.Column="2" Text="{Binding Value}" FontSize="12"
                                        Height="24" MinHeight="0" Padding="4,0"
@@ -202,7 +203,7 @@
         </Grid>
       </Border>
 
-      <controls:GraphView Grid.Column="1" Functions="{Binding Functions}" />
+      <controls:GraphView Grid.Column="1" Plots="{Binding Plots}" />
 
     </Grid>
 

@@ -98,7 +98,10 @@ public static class ExpressionAnalyzer
 
         return target.Name switch
         {
-            "y" => Result(ExpressionKind.ExplicitFunction, variables, "y"),
+            // y = ...：右侧再出现 y 时不是显函数，而是隐函数（例如 y^2 = x）
+            "y" => rightVariables.Contains("y")
+                ? Result(ExpressionKind.ImplicitCurve, variables, "y")
+                : Result(ExpressionKind.ExplicitFunction, variables, "y"),
             "r" => Result(ExpressionKind.PolarCurve, variables, "r"),
             "x" => rightVariables.Contains("y")
                 ? Result(ExpressionKind.ImplicitCurve, variables, "x")

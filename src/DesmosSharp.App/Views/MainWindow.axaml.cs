@@ -46,6 +46,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnParameterDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: ParameterViewModel parameter })
+        {
+            parameter.IsEditingSettings = !parameter.IsEditingSettings;
+            e.Handled = true;
+        }
+    }
+
     private void OnRowAdded(object? sender, int index) =>
         Dispatcher.UIThread.Post(() => FocusRow(index), DispatcherPriority.Loaded);
 

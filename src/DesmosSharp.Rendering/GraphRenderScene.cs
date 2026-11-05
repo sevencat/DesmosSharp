@@ -2,19 +2,19 @@ using DesmosSharp.Graphing;
 
 namespace DesmosSharp.Rendering;
 
-/// <summary>一次绘制所需的全部数据（视口、像素尺寸与待绘制函数）。</summary>
+/// <summary>一次绘制所需的全部数据（视口、像素尺寸与待绘制图形）。</summary>
 public sealed class GraphRenderScene
 {
     public GraphRenderScene(
         GraphViewport viewport,
         double width,
         double height,
-        IReadOnlyList<PlottedFunction> functions)
+        IReadOnlyList<PlotItem> plots)
     {
         Viewport = viewport;
         Width = width;
         Height = height;
-        Functions = functions;
+        Plots = plots;
     }
 
     public GraphViewport Viewport { get; }
@@ -23,5 +23,5 @@ public sealed class GraphRenderScene
 
     public double Height { get; }
 
-    public IReadOnlyList<PlottedFunction> Functions { get; }
+    public IReadOnlyList<PlotItem> Plots { get; }
 }

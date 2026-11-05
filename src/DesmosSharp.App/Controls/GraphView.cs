@@ -10,8 +10,8 @@ namespace DesmosSharp.App.Controls;
 /// <summary>图形画板：Skia 直绘 + 滚轮缩放（光标锚定）+ 拖拽平移。</summary>
 public sealed class GraphView : Control
 {
-    public static readonly StyledProperty<IReadOnlyList<PlottedFunction>?> FunctionsProperty =
-        AvaloniaProperty.Register<GraphView, IReadOnlyList<PlottedFunction>?>(nameof(Functions));
+    public static readonly StyledProperty<IReadOnlyList<PlotItem>?> PlotsProperty =
+        AvaloniaProperty.Register<GraphView, IReadOnlyList<PlotItem>?>(nameof(Plots));
 
     private readonly GraphRenderer _renderer = new();
     private GraphViewport _viewport = GraphViewport.Default;
@@ -24,17 +24,17 @@ public sealed class GraphView : Control
         Focusable = true;
     }
 
-    public IReadOnlyList<PlottedFunction>? Functions
+    public IReadOnlyList<PlotItem>? Plots
     {
-        get => GetValue(FunctionsProperty);
-        set => SetValue(FunctionsProperty, value);
+        get => GetValue(PlotsProperty);
+        set => SetValue(PlotsProperty, value);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == FunctionsProperty)
+        if (change.Property == PlotsProperty)
         {
             InvalidateVisual();
         }
@@ -48,7 +48,7 @@ public sealed class GraphView : Control
             return;
         }
 
-        var scene = new GraphRenderScene(_viewport, bounds.Width, bounds.Height, Functions ?? []);
+        var scene = new GraphRenderScene(_viewport, bounds.Width, bounds.Height, Plots ?? []);
         context.Custom(new GraphDrawOperation(new Rect(bounds.Size), scene, _renderer));
     }
 
